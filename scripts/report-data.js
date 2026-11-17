@@ -1,0 +1,21 @@
+// All engineering scenarios, evidence and attribution below are fictional demo data.
+const reportProjects = {
+  RS: ['Rear Shock Absorber', 'Ford reference', 'Crossover prototype', 'Rear shock absorber'],
+  FA: ['Front Axle Validation', 'Mercedes reference', 'SUV prototype', 'Front suspension'],
+  BC: ['Brake Cooling', 'Ford reference', 'Crossover prototype', 'Front brake assembly'],
+  FT: ['Fleet Telematics', 'Demo fleet customer', 'Service van', 'Telematics module']
+};
+const reportDocuments = [
+  ['RS', 'Change Management', 'Rear damper calibration revision', 'Rear shock absorber', 'Design → Validation', 'Email', 'Prototype B damper email · CHG-204', 'Asha Rao', 'Chassis Engineering', 'Dev Menon, Mira Shah', '2026-10-27', 'Rough-road runs showed excessive rebound oscillation.', 'Evaluate a damping target of 2,000 N·s/m against the 1,850 N·s/m baseline.', 'Compare body acceleration and settling time in the same test conditions.'],
+  ['RS', 'Know-How', 'Cold top-out investigation', 'Rebound bumper', 'Validation', 'Voice', 'Cold chamber debrief · 02:14–02:48', 'Mira Shah', 'Chassis Validation', 'Asha Rao, Ravi Sen', '2026-10-28', 'The cold-soaked prototype produced a sharp top-out event.', 'Compare cold and ambient force–deflection curves.', 'Record temperature and available deflection before carrying over the bumper.'],
+  ['RS', 'Warranty / Field Return / Failure', 'Bumper cap retention investigation', 'Bumper cap', 'Field investigation', 'Email', 'Return inspection thread · FR-RS-003', 'Dev Menon', 'Field Quality', 'Ravi Sen, Mira Shah', '2026-10-30', 'A returned unit showed cap migration and witness marks.', 'Open a retention investigation for the affected revision.', 'Record part revision and compare retention before and after repeated engagement.'],
+  ['FA', 'Project Management', 'Front axle validation action register', 'Rod guide', 'Validation planning', 'MoM', 'Front axle design review · Action ACT-014', 'Ravi Sen', 'Chassis Validation', 'Mira Shah, Noah Patel', '2026-11-02', 'Combined stroke and side-load coverage was missing.', 'Assign the combined-load test to the validation team.', 'Capture load direction and stroke position in the test request.'],
+  ['FA', 'Change Management', 'Front bushing prototype stiffness trial', 'Lower control arm bushing', 'Design → Validation', 'Teams', 'Front Axle channel · Thread FA-317', 'Noah Patel', 'Chassis Engineering', 'Asha Rao, Ravi Sen', '2026-11-03', 'Brake events showed excess compliance in the prototype.', 'Trial 72 Shore A against 68 Shore A.', 'Compare toe change and cabin vibration before selecting a target.'],
+  ['BC', 'Know-How', 'Brake duct clearance lesson', 'Cooling duct', 'Prototype build', 'Manual', 'Build engineer observation · BC-021', 'Lena Bose', 'Thermal Engineering', 'Noah Patel, Dev Menon', '2026-11-04', 'The duct bracket showed witness marks near full steering lock.', 'Check clearance with steering and suspension travel combined.', 'Document the interference location and installed bracket revision.'],
+  ['BC', 'Project Management', 'Brake thermal test schedule', 'Front rotor', 'Validation planning', 'Teams', 'Brake Cooling channel · Thread BC-042', 'Lena Bose', 'Thermal Validation', 'Mira Shah, Ravi Sen', '2026-11-05', 'A shared instrument set conflicted with the thermal test window.', 'Reserve the instrument set and confirm a backup test slot.', 'Link the booking and instrumentation checklist to the action register.'],
+  ['FT', 'Warranty / Field Return / Failure', 'Intermittent telemetry power loss', 'Telematics connector', 'Field investigation', 'MoM', 'Fleet return triage · Item FT-018', 'Priya Iyer', 'Fleet Reliability', 'Dev Menon, Lena Bose', '2026-11-06', 'A returned module lost power intermittently during vibration.', 'Reproduce the symptom with the returned harness and connector.', 'Record connector lot and capture a timestamped power trace.']
+].map(([project, category, title, component, stage, source, reference, contributor, team, involved, date, problem, decision, next], index) => ({
+  id: 'LX-DEMO-' + String(index + 1).padStart(2, '0'),
+  project, category, title, component, stage, source, reference,
+  contributor, owner: contributor, team, involved, date, problem, decision, next
+}));

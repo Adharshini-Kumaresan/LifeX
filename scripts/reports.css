@@ -1,0 +1,6 @@
+.report-meta-grid,.repo-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
+.report-meta-grid .meta{overflow-wrap:anywhere}
+.repo-filters label{display:grid;gap:6px;font-size:.85rem}
+.repo-filters input,.repo-filters select{width:100%;border:1px solid #366377;background:#0b1a28;color:#edf9ff;padding:9px;border-radius:6px}
+.repo-document{border-top:1px solid #366377;padding:12px 0}
+.repo-document summary{cursor:pointer;line-height:1.5}
