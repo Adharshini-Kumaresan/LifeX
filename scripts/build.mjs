@@ -30,6 +30,11 @@ const historyStart = html.indexOf('<div id="historyList">');
 const historyEnd = html.indexOf('</section>', historyStart);
 html = html.slice(0, historyStart) + `<div class="repo-filters"><label>Project <select id="repoProject"><option value="">All projects</option></select></label>
 <label>Search <input id="repoSearch" type="search" placeholder="Keyword, source, component…"></label></div><div id="historyList"></div>` + html.slice(historyEnd);
+const reportsUrl = 'https://lifex-knowledge-production.up.railway.app/reports';
+replace('<a href="#" id="navReport">', '<a href="' + reportsUrl + '" id="navReport">');
+replace("$('#navReport').onclick = event => { event.preventDefault(); openReport(); };", '');
+replace('</head>', '<style>.mobile-reports{display:none;margin-right:10px;color:var(--cyan)}@media(max-width:950px){.mobile-reports{display:inline-block}}</style></head>');
+replace('<div class="user">', '<div class="user"><a class="mobile-reports" href="' + reportsUrl + '">Decision reports</a>');
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/index.html', html);
 for (const file of ['report-data.js', 'reports.css']) copyFileSync('scripts/' + file, 'dist/' + file);
