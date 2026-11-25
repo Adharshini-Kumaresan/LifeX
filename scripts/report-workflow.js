@@ -12,7 +12,9 @@ try {
 const approvalDelay = 30_000;
 const approvers = {
   Global: { name: 'Vasu', role: 'Global head' },
-  'Project team': { name: 'Hansel', role: 'Project head' }
+  'Project team': { name: 'Hansel', role: 'Project head' },
+  Colleagues: { name: 'Hansel', role: 'Project head' },
+  'Personal learning': { name: 'Hansel', role: 'Project head' }
 };
 const repositories = {
   'Know-How': 'Know-How Repository',
@@ -272,7 +274,7 @@ $('#approveReport').onclick = () => {
     return;
   }
   const now = Date.now();
-  const approver = approvers[currentReport.scope] || null;
+  const approver = approvers[currentReport.scope] || approvers['Project team'];
   const doc = { ...currentReport, correction, approvalId: crypto.randomUUID(), approver,
     employeeApprovedAt: new Date(now).toISOString(),
     ...(approver ? { dueAt: now + approvalDelay } : { approvedAt: new Date(now).toISOString() })
@@ -298,7 +300,8 @@ $('#approveReport').onclick = () => {
   scheduleApprovals();
   if (approver) {
     $('#activity').scrollIntoView({behavior:'smooth'});
-    toast('Sent to ' + approver.name + ' for simulated approval.');
+    approvalNoticeText.textContent = 'Sent to ' + approver.name + ' for simulated approval. The report stays pending for 30 seconds.';
+    approvalNotice.hidden = false;
   } else {
     $('#historyCard').scrollIntoView({behavior:'smooth'});
     toast('Stored in the ' + repositoryName(doc) + '.');
