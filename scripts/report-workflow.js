@@ -193,6 +193,11 @@ let approvalTimer;
 function renderApprovalState() {
   $('#statDecisions').textContent = approvals.filed.length;
   $('#statReview').textContent = approvals.pending.length + (currentReport ? 1 : 0);
+  if (approvals.pending.length) {
+    $('#progressText').textContent = approvals.pending.length + ' awaiting simulated approval';
+  } else if (approvals.filed.some(doc => doc.employeeApprovedAt)) {
+    $('#progressText').textContent = 'Approved reports filed';
+  }
   approvalQueue.replaceChildren();
   for (const doc of [...approvals.pending, ...approvals.filed.filter(item => item.employeeApprovedAt).slice(0, 5)]) {
     const pending = !doc.approvedAt;
@@ -285,7 +290,6 @@ $('#approveReport').onclick = () => {
   $$('.options[data-q] .option.selected').forEach(button => button.classList.remove('selected'));
   $('#lastCheckin').textContent = 'Just now';
   $('#progressFill').style.width = '100%';
-  $('#progressText').textContent = approver ? 'Employee approved · Awaiting ' + approver.name : 'Employee approved · Stored';
   $('#repoProject').value = doc.project;
   repositoryFilter.value = doc.category;
   $('#repoSearch').value = '';
