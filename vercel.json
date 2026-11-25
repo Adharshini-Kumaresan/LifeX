@@ -1,4 +1,10 @@
 {
   "buildCommand": "node scripts/build.mjs",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/account/:action",
+      "destination": "https://lifex-knowledge-production.up.railway.app/account/:action"
+    }
+  ]
 }
