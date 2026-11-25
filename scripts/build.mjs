@@ -69,6 +69,59 @@ replace('</body>', `<div id="auth-status" role="status">Checking your LifeX acco
 })();
 </script></body>`);
 
+replace('<div class="form-progress-wrap">', `<div id="knowledgeUpload" class="knowledge-upload">
+  <label for="knowledgeDocument">Upload a document to autofill</label>
+  <div class="knowledge-upload-controls"><input id="knowledgeDocument" type="file" accept=".docx,.pdf,.txt,.md" aria-describedby="knowledgeUploadHelp">
+  <button class="knowledge-primary" id="autofillKnowledge" type="button">Autofill answers</button></div>
+  <p id="knowledgeUploadHelp">Use the selected component code and label answers Q1–Q10. Word, PDF, TXT or Markdown, up to 4 MB.</p>
+  <p id="knowledgeUploadStatus" role="status"></p>
+</div><div class="form-progress-wrap">`);
+replace('</head>', '<style>.knowledge-upload{margin:0 24px 12px;padding:12px 14px;border:1px solid #275368;background:#081923}.knowledge-upload label{display:block;font-weight:700;margin-bottom:8px}.knowledge-upload-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.knowledge-upload input{max-width:100%;color:#ccecf4}.knowledge-upload p{margin:7px 0 0;color:#a7c9d2;font-size:12px}.knowledge-upload p:empty{display:none}</style></head>');
+replace('selectComponent(selectedPart);\n\n</script>', `selectComponent(selectedPart);
+const knowledgeDocument=document.getElementById('knowledgeDocument');
+const autofillKnowledge=document.getElementById('autofillKnowledge');
+const knowledgeUploadStatus=document.getElementById('knowledgeUploadStatus');
+autofillKnowledge.addEventListener('click',async()=>{
+ const file=knowledgeDocument.files[0];
+ if(!file || file.size>4*1024*1024){knowledgeUploadStatus.textContent='Choose a document up to 4 MB.';return;}
+ const part=selectedPart;
+ const fields=[...document.querySelectorAll('#knowledgeQuestionList textarea')];
+ const form=new FormData();
+ form.append('component',componentMeta[part].code);
+ form.append('document',file);
+ autofillKnowledge.disabled=true;
+ knowledgeUploadStatus.textContent='Reading document…';
+ try {
+   const response=await fetch('/account/deposit-draft',{method:'POST',body:form});
+   if(response.status===401){location.assign('/account/start');return;}
+   if(response.status===413)throw new Error('Choose a document up to 4 MB.');
+   const result=await response.json();
+   if(!response.ok)throw new Error(result.error || 'The document could not be mapped.');
+   if(part!==selectedPart || !knowledgeModal.classList.contains('show') || !fields.every(field=>field.isConnected))return;
+   let filled=0, kept=0;
+   fields.forEach((field,index)=>{
+     const answer=result.answers[String(index+1)];
+     if(!answer)return;
+     if(field.value.trim()){kept++;return;}
+     field.value=answer;
+     field.dispatchEvent(new Event('input',{bubbles:true}));
+     filled++;
+   });
+   knowledgeUploadStatus.textContent=filled+' of '+fields.length+' fields filled. '+(kept?kept+' existing answers kept. ':'')+'Review and save the deposit when ready.';
+ }catch(error){
+   knowledgeUploadStatus.textContent=error.message || 'The document could not be imported.';
+ }finally{
+   autofillKnowledge.disabled=false;
+ }
+});
+document.getElementById('openKnowledgeForm').addEventListener('click',()=>{
+ document.getElementById('knowledgeUploadHelp').textContent='Component code '+componentMeta[selectedPart].code+'. Label answers Q1–Q10. Word, PDF, TXT or Markdown, up to 4 MB.';
+ knowledgeDocument.value='';
+ knowledgeUploadStatus.textContent='';
+});
+
+</script>`);
+
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/index.html', html);
 for (const file of ['report-data.js', 'reports.css']) copyFileSync('scripts/' + file, 'dist/' + file);
