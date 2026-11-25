@@ -8,12 +8,13 @@ function replace(original, replacement) {
 replace('</head>', '<link rel="stylesheet" href="/reports.css"></head>');
 replace('<span class="ico">◷</span> Review history', '<span class="ico">◷</span> Project repositories');
 replace('Both meeting and email</button>', 'Both meeting and email</button><button class="option" data-value="teams">Microsoft Teams chat</button>');
-replace('  </div>\n  <div class="modalfoot"><div class="step">', `   <div class="q"><div class="qtitle">5. Who should this learning be useful to?</div><div class="options" data-q="scope">
+replace("   <div class=\"q\"><div class=\"qtitle\">4. Is this change likely to affect product requirements or validation?</div><div class=\"options\" data-q=\"impact\"><button class=\"option\" data-value=\"yes\">Yes, it may affect them</button><button class=\"option\" data-value=\"no\">No expected impact</button><button class=\"option\" data-value=\"unknown\">Needs assessment</button></div></div>\n", '');
+replace("<div class=\"step\"><span class=\"on\"></span><span></span><span></span><span></span><span></span></div><button class=\"primary\" id=\"submitCheckin\">", "<div class=\"step\"><span class=\"on\"></span><span></span><span></span><span></span></div><button class=\"primary\" id=\"submitCheckin\">");
+replace('  </div>\n  <div class="modalfoot"><div class="step">', `   <div class="q"><div class="qtitle">4. Who should this learning be useful to?</div><div class="options" data-q="scope">
    <button class="option" data-value="Personal learning">Personal learning</button><button class="option" data-value="Colleagues">Colleagues</button><button class="option" data-value="Project team">Project team</button><button class="option" data-value="Global">Global</button></div></div>
   </div>
   <div class="modalfoot"><div class="step">`);
-replace("['decision','change','evidence','impact']", "['decision','change','evidence','impact','scope']");
-replace('all four questions', 'all five questions');
+replace("['decision','change','evidence','impact']", "['decision','change','evidence','scope']");
 const sectionStart = html.indexOf('    <div class="reporttitle">');
 const sectionEnd = html.indexOf('    <div class="reviewbox"', sectionStart);
 if (sectionStart < 0 || sectionEnd < 0) throw new Error('Missing report body');
