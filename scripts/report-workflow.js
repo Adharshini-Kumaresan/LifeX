@@ -1,10 +1,26 @@
 const reportStorage = 'lifex-reviewed-documents-v1';
-let reviewed = [];
+function readApprovalState() {
+  const saved = JSON.parse(localStorage.getItem(reportStorage) || '[]');
+  return Array.isArray(saved) ? { filed: saved, pending: [] } : saved;
+}
+let approvals = { filed: [], pending: [] };
 let previousReport = '';
 try {
-  reviewed = JSON.parse(localStorage.getItem(reportStorage) || '[]');
+  approvals = readApprovalState();
   previousReport = localStorage.getItem('lifex-last-document') || '';
 } catch {}
+const approvalDelay = 30_000;
+const approvers = {
+  Global: { name: 'Vasu', role: 'Global head' },
+  'Project team': { name: 'Hansel', role: 'Project head' }
+};
+const repositories = {
+  'Know-How': 'Know-How Repository',
+  'Project Management': 'Project Management Repository',
+  'Change Management': 'Change Management Repository',
+  'Warranty / Field Return / Failure': 'Warranty Repository'
+};
+const repositoryName = doc => repositories[doc.category] || 'Know-How Repository';
 let currentReport;
 let pool = [];
 let scanTimers = [];
@@ -26,7 +42,7 @@ function nextReport() {
 
 function reportPath(doc) {
   const [project, oe, vehicle, assembly] = reportProjects[doc.project];
-  return [project, ...(doc.scope === 'Global' ? ['Global'] : []), oe, vehicle, assembly, doc.component, 'Repository', doc.category].join(' › ');
+  return [doc.scope, project, oe, vehicle, assembly, doc.component, repositoryName(doc)].filter(Boolean).join(' › ');
 }
 
 const categoryColors = {
@@ -75,7 +91,7 @@ function startScan() {
         currentReport = draft;
         $('#scanState').textContent = 'AWAITING REVIEW';
         $('#scanContinue').disabled = false;
-        $('#statReview').textContent = '1';
+        $('#statReview').textContent = approvals.pending.length + 1;
       }
     }, [1400, 3400, 6200, 9600][index]));
   });
@@ -87,7 +103,9 @@ function documentBody(doc) {
     ['Contributor', doc.contributor], ['Owner', doc.owner], ['Team', doc.team],
     ['People involved', doc.involved], ['Source date', doc.date],
     ['Generated', doc.generatedAt && new Date(doc.generatedAt).toLocaleDateString('en-IN', {timeZone:'Asia/Kolkata'})],
-    ['Lifecycle stage', doc.stage]
+    ['Lifecycle stage', doc.stage],
+    ['Repository', doc.employeeApprovedAt ? repositoryName(doc) : 'Assigned after approval'],
+    ...(doc.employeeApprovedAt ? [['Approval', doc.approver ? (doc.approvedAt ? doc.approver.name + ' approved · Simulated' : 'Awaiting ' + doc.approver.name + ' · Simulated') : 'Employee approved']] : [])
   ];
   return '<p class="muted small">' + reportEscape(reportPath(doc)) + '</p>' +
     '<div class="report-meta-grid">' + meta.map(([label, value]) =>
@@ -128,13 +146,14 @@ function saveDraft() {
 function renderRepository() {
   const project = $('#repoProject').value;
   const terms = $('#repoSearch').value.toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const matches = reviewed.filter(doc => {
+  const category = repositoryFilter.value;
+  const matches = approvals.filed.filter(doc => {
     const searchable = (reportPath(doc) + ' ' + Object.values(doc).join(' ')).toLowerCase();
-    return (!project || doc.project === project) && terms.every(term => searchable.includes(term));
+    return (!project || doc.project === project) && (!category || doc.category === category) && terms.every(term => searchable.includes(term));
   });
   $('#historyList').innerHTML = matches.length ? matches.map(doc =>
     '<details class="repo-document"><summary><span style="color:' + categoryColors[doc.category] + '">' +
-    reportEscape(doc.category) + '</span> · ' + reportEscape(doc.title) + '</summary>' +
+    reportEscape(repositoryName(doc)) + '</span> · ' + reportEscape(doc.title) + '</summary>' +
     documentBody(doc) + '</details>').join('') : '<p class="muted">No approved documents match this view.</p>';
 }
 for (const [key, [label]] of Object.entries(reportProjects)) {
@@ -142,9 +161,96 @@ for (const [key, [label]] of Object.entries(reportProjects)) {
 }
 $('#repoProject').onchange = renderRepository;
 $('#repoSearch').oninput = renderRepository;
-$('#statDecisions').textContent = reviewed.length;
-$('#statReview').textContent = '0';
-renderRepository();
+const repositoryFilter = document.createElement('select');
+repositoryFilter.add(new Option('All repositories', ''));
+for (const [category, label] of Object.entries(repositories)) {
+  repositoryFilter.add(new Option(label, category));
+}
+const repositoryFilterLabel = document.createElement('label');
+repositoryFilterLabel.append('Repository ', repositoryFilter);
+$('#repoProject').closest('.repo-filters').append(repositoryFilterLabel);
+repositoryFilter.onchange = renderRepository;
+
+const approvalQueue = document.createElement('div');
+approvalQueue.setAttribute('aria-label', 'Approval activity');
+$('#activity').prepend(approvalQueue);
+const approvalNotice = document.createElement('div');
+approvalNotice.hidden = true;
+approvalNotice.setAttribute('role', 'status');
+Object.assign(approvalNotice.style, { position:'fixed', right:'16px', bottom:'16px',
+  maxWidth:'min(420px, calc(100vw - 32px))', zIndex:'100', padding:'14px',
+  background:'#0c2432', color:'#e5fbff', border:'1px solid #59e7ff', borderRadius:'6px',
+  boxShadow:'0 6px 28px #0008' });
+const approvalNoticeText = document.createElement('p');
+const dismissNotice = document.createElement('button');
+dismissNotice.type = 'button';
+dismissNotice.textContent = 'Dismiss';
+dismissNotice.onclick = () => { approvalNotice.hidden = true; };
+approvalNotice.append(approvalNoticeText, dismissNotice);
+document.body.append(approvalNotice);
+
+let approvalTimer;
+function renderApprovalState() {
+  $('#statDecisions').textContent = approvals.filed.length;
+  $('#statReview').textContent = approvals.pending.length + (currentReport ? 1 : 0);
+  approvalQueue.replaceChildren();
+  for (const doc of [...approvals.pending, ...approvals.filed.filter(item => item.employeeApprovedAt).slice(0, 5)]) {
+    const pending = !doc.approvedAt;
+    const event = document.createElement('div');
+    event.className = 'event';
+    const icon = document.createElement('div');
+    icon.className = 'eventicon';
+    icon.textContent = pending ? '→' : '✓';
+    const content = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = doc.title;
+    const note = document.createElement('p');
+    note.textContent = pending
+      ? 'Sent to ' + doc.approver.name + ' · ' + doc.approver.role + ' · Simulated'
+      : (doc.approver ? doc.approver.name + ' approved · Simulated · ' : '') + 'Stored in ' + repositoryName(doc);
+    const status = document.createElement('span');
+    status.className = 'tag ' + (pending ? 'amber' : 'green');
+    status.textContent = pending ? 'Awaiting approval' : 'Stored';
+    content.append(title, note);
+    event.append(icon, content, status);
+    approvalQueue.append(event);
+  }
+  renderRepository();
+}
+
+function scheduleApprovals() {
+  clearTimeout(approvalTimer);
+  if (!approvals.pending.length) return;
+  const due = Math.min(...approvals.pending.map(doc => doc.dueAt));
+  approvalTimer = setTimeout(completeApprovals, Math.max(0, due - Date.now()));
+}
+function completeApprovals() {
+  let latest;
+  try { latest = readApprovalState(); }
+  catch { toast('Could not read the approval queue.'); return; }
+  const now = Date.now();
+  const completed = latest.pending.filter(doc => doc.dueAt <= now)
+    .map(doc => ({ ...doc, approvedAt: new Date(now).toISOString() }));
+  if (completed.length) {
+    const next = { filed: [...completed, ...latest.filed], pending: latest.pending.filter(doc => doc.dueAt > now) };
+    try { localStorage.setItem(reportStorage, JSON.stringify(next)); }
+    catch {
+      toast('Could not file the approved report. LifeX will retry.');
+      approvalTimer = setTimeout(completeApprovals, 5000);
+      return;
+    }
+    approvals = next;
+    approvalNoticeText.textContent = completed.map(doc =>
+      doc.approver.name + ' approved (simulated). ' + doc.title + ' was stored in the ' + repositoryName(doc) + '.').join(' ');
+    approvalNotice.hidden = false;
+  } else approvals = latest;
+  renderApprovalState();
+  scheduleApprovals();
+}
+window.addEventListener('storage', event => {
+  if (event.key === reportStorage) completeApprovals();
+});
+completeApprovals();
 
 $('#closeScan').onclick = stopScan;
 $('#scanContinue').onclick = () => { stopScan(); openReport(); };
@@ -160,30 +266,39 @@ $('#approveReport').onclick = () => {
     $('#correctionText').focus();
     return;
   }
-  const doc = { ...currentReport, correction };
-  const next = [doc, ...reviewed.filter(item => item.id !== doc.id)];
-  try { localStorage.setItem(reportStorage, JSON.stringify(next)); }
-  catch { return toast('Browser storage is unavailable. The draft is still open.'); }
-  reviewed = next;
+  const now = Date.now();
+  const approver = approvers[currentReport.scope] || null;
+  const doc = { ...currentReport, correction, approvalId: crypto.randomUUID(), approver,
+    employeeApprovedAt: new Date(now).toISOString(),
+    ...(approver ? { dueAt: now + approvalDelay } : { approvedAt: new Date(now).toISOString() })
+  };
+  try {
+    const latest = readApprovalState();
+    const next = approver
+      ? { filed: latest.filed, pending: [doc, ...latest.pending] }
+      : { filed: [doc, ...latest.filed], pending: latest.pending };
+    localStorage.setItem(reportStorage, JSON.stringify(next));
+    approvals = next;
+  } catch { return toast('Browser storage is unavailable. The draft is still open.'); }
   currentReport = null;
   Object.keys(answers).forEach(key => delete answers[key]);
   $$('.options[data-q] .option.selected').forEach(button => button.classList.remove('selected'));
-  $('#statDecisions').textContent = reviewed.length;
-  $('#statReview').textContent = '0';
   $('#lastCheckin').textContent = 'Just now';
   $('#progressFill').style.width = '100%';
-  $('#progressText').textContent = 'Sample document reviewed';
-  const event = document.createElement('div');
-  event.className = 'event';
-  event.innerHTML = '<div class="eventicon">✓</div><div><strong>' + reportEscape(doc.title) +
-    '</strong><p>' + reportEscape(reportProjects[doc.project][0]) + '</p></div><span class="tag green">Approved</span>';
-  $('#activity').prepend(event);
+  $('#progressText').textContent = approver ? 'Employee approved · Awaiting ' + approver.name : 'Employee approved · Stored';
   $('#repoProject').value = doc.project;
+  repositoryFilter.value = doc.category;
   $('#repoSearch').value = '';
-  renderRepository();
+  renderApprovalState();
   hide('reportOverlay');
-  $('#historyCard').scrollIntoView({behavior:'smooth'});
-  toast('Document approved and saved to its project repository.');
+  scheduleApprovals();
+  if (approver) {
+    $('#activity').scrollIntoView({behavior:'smooth'});
+    toast('Sent to ' + approver.name + ' for simulated approval.');
+  } else {
+    $('#historyCard').scrollIntoView({behavior:'smooth'});
+    toast('Stored in the ' + repositoryName(doc) + '.');
+  }
 };
 $('#navReport').onclick = event => { event.preventDefault(); openReport(); };
 $('#navHistory').onclick = event => { event.preventDefault(); $('#historyCard').scrollIntoView({behavior:'smooth'}); };
